@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Trading Bot Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active { background: #27ae60; }
+        .status-paused { background: #f39c12; }
+        .status-stopped { background: #e74c3c; }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn-success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .success {
+            background: #efe;
+            color: #363;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .trade-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .trade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-size: 0.9rem;
+        }
+        
+        .trade-item:last-child {
+            border-bottom: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Crypto Trading Bot Dashboard</h1>
+        <div style="display: flex; gap: 1rem;">
+            <a href="/backtesting.html" style="color: #2c3e50; text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; background: rgba(255,255,255,0.8); border-radius: 8px; transition: all 0.3s ease;">
+                📊 Backtesting
+            </a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="dashboard-grid">
+            <!-- System Status Card -->
+            <div class="card">
+                <h2>System Status</h2>
+                <div id="system-status" class="loading">Loading...</div>
+            </div>
+            
+            <!-- Account Overview Card -->
+            <div class="card">
+                <h2>Account Overview</h2>
+                <div id="account-overview" class="loading">Loading...</div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-success" onclick="showCreateAccountModal()">Create Account</button>
+                </div>
+            </div>
+            
+            <!-- Trading Controls Card -->
+            <div class="card">
+                <h2>Trading Controls</h2>
+                <div id="trading-controls">
+                    <div class="form-group">
+                        <label>Select Account:</label>
+                        <select id="account-select">
+                            <option value="">Loading accounts...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Trading Symbol:</label>
+                        <select id="symbol-select">
+                            <option value="BTCUSDT">BTC/USDT</option>
+                            <option value="ETHUSDT">ETH/USDT</option>
+                            <option value="BNBUSDT">BNB/USDT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-success" onclick="startTrading()">Start Trading</button>
+                        <button class="btn btn-warning" onclick="pauseTrading()">Pause</button>
+                        <button class="btn btn-danger" onclick="stopTrading()">Stop</button>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn" onclick="analyzeMarket()">Analyze Market</button>
+                        <button class="btn" onclick="refreshData()">Refresh Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-grid">
+            <!-- Market Analysis Card -->
+            <div class="card">
+                <h2>AI Market Analysis</h2>
+                <div id="market-analysis" class="loading">Click "Analyze Market" to get AI insights</div>
+            </div>
+            
+            <!-- Open Positions Card -->
+            <div class="card">
+                <h2>Open Positions</h2>
+                <div id="open-positions" class="loading">Loading...</div>
+            </div>
+            
+            <!-- Recent Trades Card -->
+            <div class="card">
+                <h2>Recent Trades</h2>
+                <div id="recent-trades" class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Account Modal -->
+    <div id="create-account-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('create-account-modal')">&times;</span>
+            <h2>Create Trading Account</h2>
+            <form id="create-account-form">
+                <div class="form-group">
+                    <label>Account Name:</label>
+                    <input type="text" id="account-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Exchange:</label>
+                    <select id="exchange-select" required>
+                        <option value="binance">Binance</option>
+                        <option value="coinbase">Coinbase</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>API Key:</label>
+                    <input type="text" id="api-key" required>
+                </div>
+                <div class="form-group">
+                    <label>API Secret:</label>
+                    <input type="password" id="api-secret" required>
+                </div>
+                <div class="form-group">
+                    <label>Initial Balance ($):</label>
+                    <input type="number" id="initial-balance" value="100" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Risk per Trade (%):</label>
+                    <input type="number" id="risk-percentage" value="1" min="0.1" max="5" step="0.1" required>
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let currentAccountId = null;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemStatus();
+            loadAccounts();
+            loadAccountOverview();
+            loadOpenPositions();
+            loadRecentTrades();
+            
+            // Refresh data every 30 seconds
+            setInterval(refreshData, 30000);
+        });
+        
+        // API helper function
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`/api/trading${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'API call failed');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API call failed:', error);
+                showError(error.message);
+                return null;
+            }
+        }
+        
+        // Load system status
+        async function loadSystemStatus() {
+            const result = await apiCall('/system/status');
+            if (result) {
+                const statusDiv = document.getElementById('system-status');
+                const status = result.status;
+                
+                statusDiv.innerHTML = `
+                    <div class="metric">
+                        <span>Database:</span>
+                        <span class="status-indicator ${status.database ? 'status-active' : 'status-stopped'}"></span>
+                    </div>
+                    <div class="metric">
+                        <span>AI Service:</span>
+                        <span class="status-indicator ${status.ai_service ? 'status-active' : 'status-stopped'}"></span>
+                    </div>
+                    <div class="metric">
+                        <span>Active Accounts:</span>
+                        <span class="metric-value">${status.statistics.active_accounts}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Open Positions:</span>
+                        <span class="metric-value">${status.statistics.open_positions}</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load accounts
+        async function loadAccounts() {
+            const result = await apiCall('/accounts');
+            if (result) {
+                const select = document.getElementById('account-select');
+                select.innerHTML = '<option value="">Select an account</option>';
+                
+                result.accounts.forEach(account => {
+                    const option = document.createElement('option');
+                    option.value = account.id;
+                    option.textContent = `${account.name} (${account.exchange}) - $${account.balance}`;
+                    select.appendChild(option);
+                });
+                
+                if (result.accounts.length > 0 && !currentAccountId) {
+                    currentAccountId = result.accounts[0].id;
+                    select.value = currentAccountId;
+                }
+            }
+        }
+        
+        // Load account overview
+        async function loadAccountOverview() {
+            if (!currentAccountId) return;
+            
+            const result = await apiCall(`/accounts/${currentAccountId}`);
+            if (result) {
+                const account = result.account;
+                const overviewDiv = document.getElementById('account-overview');
+                
+                overviewDiv.innerHTML = `
+                    <div class="metric">
+                        <span>Balance:</span>
+                        <span class="metric-value">$${account.balance.toFixed(2)}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Status:</span>
+                        <span class="status-indicator status-${account.status}"></span>
+                        <span>${account.status.toUpperCase()}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Total Trades:</span>
+                        <span class="metric-value">${account.total_trades}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Open Positions:</span>
+                        <span class="metric-value">${account.open_positions}</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load open positions
+        async function loadOpenPositions() {
+            if (!currentAccountId) return;
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/positions`);
+            if (result) {
+                const positionsDiv = document.getElementById('open-positions');
+                
+                if (result.positions.length === 0) {
+                    positionsDiv.innerHTML = '<p>No open positions</p>';
+                } else {
+                    positionsDiv.innerHTML = result.positions.map(position => `
+                        <div class="trade-item">
+                            <div>
+                                <strong>${position.symbol}</strong> ${position.side}<br>
+                                <small>Entry: $${position.entry_price}</small>
+                            </div>
+                            <div>
+                                <span class="metric-value ${position.unrealized_pnl >= 0 ? 'positive' : 'negative'}">
+                                    ${position.unrealized_pnl >= 0 ? '+' : ''}$${position.unrealized_pnl.toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+        
+        // Load recent trades
+        async function loadRecentTrades() {
+            if (!currentAccountId) return;
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/trades?limit=10`);
+            if (result) {
+                const tradesDiv = document.getElementById('recent-trades');
+                
+                if (result.trades.length === 0) {
+                    tradesDiv.innerHTML = '<p>No recent trades</p>';
+                } else {
+                    tradesDiv.innerHTML = '<div class="trade-list">' + 
+                        result.trades.map(trade => `
+                            <div class="trade-item">
+                                <div>
+                                    <strong>${trade.symbol}</strong> ${trade.side}<br>
+                                    <small>${new Date(trade.created_at).toLocaleString()}</small>
+                                </div>
+                                <div>
+                                    <span class="metric-value">$${trade.total_value.toFixed(2)}</span><br>
+                                    <small class="status-indicator status-${trade.status === 'filled' ? 'active' : 'stopped'}"></small>
+                                    <small>${trade.status}</small>
+                                </div>
+                            </div>
+                        `).join('') + '</div>';
+                }
+            }
+        }
+        
+        // Analyze market
+        async function analyzeMarket() {
+            if (!currentAccountId) {
+                showError('Please select an account first');
+                return;
+            }
+            
+            const symbol = document.getElementById('symbol-select').value;
+            const analysisDiv = document.getElementById('market-analysis');
+            analysisDiv.innerHTML = '<div class="loading">Analyzing market with AI...</div>';
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/analyze`, 'POST', { symbol });
+            if (result) {
+                const signal = result.signal;
+                analysisDiv.innerHTML = `
+                    <div class="metric">
+                        <span>Recommendation:</span>
+                        <span class="metric-value ${signal.action === 'BUY' ? 'positive' : signal.action === 'SELL' ? 'negative' : ''}">${signal.action}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Confidence:</span>
+                        <span class="metric-value">${signal.confidence || 'N/A'}%</span>
+                    </div>
+                    <div class="metric">
+                        <span>Entry Price:</span>
+                        <span class="metric-value">$${signal.entry_price || 'N/A'}</span>
+                    </div>
+                    <div class="metric">
+                        <span>Stop Loss:</span>
+                        <span class="metric-value">$${signal.stop_loss || 'N/A'}</span>
+                    </div>
+                    <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9rem;">
+                        <strong>Reasoning:</strong><br>
+                        ${signal.reasoning || signal.reason || 'No detailed reasoning provided'}
+                    </div>
+                `;
+            }
+        }
+        
+        // Trading controls
+        async function startTrading() {
+            if (!currentAccountId) {
+                showError('Please select an account first');
+                return;
+            }
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/start`, 'POST');
+            if (result) {
+                showSuccess(result.message);
+                loadAccountOverview();
+            }
+        }
+        
+        async function pauseTrading() {
+            if (!currentAccountId) {
+                showError('Please select an account first');
+                return;
+            }
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/pause`, 'POST');
+            if (result) {
+                showSuccess(result.message);
+                loadAccountOverview();
+            }
+        }
+        
+        async function stopTrading() {
+            if (!currentAccountId) {
+                showError('Please select an account first');
+                return;
+            }
+            
+            const result = await apiCall(`/accounts/${currentAccountId}/stop`, 'POST');
+            if (result) {
+                showSuccess(result.message);
+                loadAccountOverview();
+            }
+        }
+        
+        // Refresh all data
+        function refreshData() {
+            loadSystemStatus();
+            loadAccountOverview();
+            loadOpenPositions();
+            loadRecentTrades();
+        }
+        
+        // Account selection change
+        document.getElementById('account-select').addEventListener('change', function() {
+            currentAccountId = this.value ? parseInt(this.value) : null;
+            if (currentAccountId) {
+                loadAccountOverview();
+                loadOpenPositions();
+                loadRecentTrades();
+            }
+        });
+        
+        // Modal functions
+        function showCreateAccountModal() {
+            document.getElementById('create-account-modal').style.display = 'block';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // Create account form
+        document.getElementById('create-account-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('account-name').value,
+                exchange: document.getElementById('exchange-select').value,
+                api_key: document.getElementById('api-key').value,
+                api_secret: document.getElementById('api-secret').value,
+                balance: parseFloat(document.getElementById('initial-balance').value),
+                risk_percentage: parseFloat(document.getElementById('risk-percentage').value)
+            };
+            
+            const result = await apiCall('/accounts', 'POST', formData);
+            if (result) {
+                showSuccess('Account created successfully!');
+                closeModal('create-account-modal');
+                loadAccounts();
+                document.getElementById('create-account-form').reset();
+            }
+        });
+        
+        // Utility functions
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            setTimeout(() => successDiv.remove(), 5000);
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
